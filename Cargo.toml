@@ -1,6 +1,6 @@
 [package]
 name = "p2p-tunnel"
-version = "0.1.2"
+version = "0.1.4"
 edition = "2024"
 description = "Instantly share a localhost port over P2P using Iroh"
 repository = "https://github.com/drmikesamy/p2p-tunnel"
