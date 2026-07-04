@@ -140,6 +140,26 @@ jobs:
       - name: Install dependencies
         run: |
           ${{ matrix.packages_install }}
+      - name: Install Android NDK
+        if: ${{ contains(matrix.dist_args, 'linux-android') }}
+        id: setup-ndk
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r26d
+      - name: Configure Android toolchain
+        if: ${{ contains(matrix.dist_args, 'linux-android') }}
+        run: |
+          NDK_BIN="${{ steps.setup-ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/bin"
+          if [[ "${{ matrix.dist_args }}" == *"aarch64-linux-android"* ]]; then
+            rustup target add aarch64-linux-android
+            echo "CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=${NDK_BIN}/aarch64-linux-android24-clang" >> "$GITHUB_ENV"
+            echo "CC_aarch64_linux_android=${NDK_BIN}/aarch64-linux-android24-clang" >> "$GITHUB_ENV"
+          fi
+          if [[ "${{ matrix.dist_args }}" == *"x86_64-linux-android"* ]]; then
+            rustup target add x86_64-linux-android
+            echo "CARGO_TARGET_X86_64_LINUX_ANDROID_LINKER=${NDK_BIN}/x86_64-linux-android24-clang" >> "$GITHUB_ENV"
+            echo "CC_x86_64_linux_android=${NDK_BIN}/x86_64-linux-android24-clang" >> "$GITHUB_ENV"
+          fi
       - name: Build artifacts
         run: |
           # Actually do builds and make zips and whatnot
@@ -303,6 +323,31 @@ jobs:
       - run: |
           for release in $(echo "$PLAN" | jq --compact-output '.releases[] | select([.artifacts[] | endswith("-npm-package.tar.gz")] | any)'); do
             pkg=$(echo "$release" | jq '.artifacts[] | select(endswith("-npm-package.tar.gz"))' --raw-output)
+            tmpdir=$(mktemp -d)
+            tar -xzf "./npm/${pkg}" -C "$tmpdir"
+            node - "$tmpdir/package/binary.js" <<'NODE'
+const fs = require("fs");
+const path = process.argv[2];
+let source = fs.readFileSync(path, "utf8");
+
+if (!source.includes("rawNodePlatform = process.platform")) {
+  source = source.replace(
+    "const rawOsType = os.type();\n  const rawArchitecture = os.arch();",
+    "const rawOsType = os.type();\n  const rawNodePlatform = process.platform;\n  const rawArchitecture = os.arch();",
+  );
+  source = source.replace(
+    "  let osType = \"\";",
+    "  let osType = \"\";\n  if (rawNodePlatform === \"android\") {\n    osType = \"linux-android\";\n  }",
+  );
+  source = source.replace(
+    "  if (rawOsType === \"Linux\") {",
+    "  if (rawOsType === \"Linux\" && rawNodePlatform !== \"android\") {",
+  );
+  fs.writeFileSync(path, source, "utf8");
+}
+NODE
+            tar -czf "./npm/${pkg}" -C "$tmpdir" package
+            rm -rf "$tmpdir"
             npm publish --provenance --access public "./npm/${pkg}"
           done
 
