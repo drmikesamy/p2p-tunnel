@@ -326,26 +326,26 @@ jobs:
             tmpdir=$(mktemp -d)
             tar -xzf "./npm/${pkg}" -C "$tmpdir"
             node - "$tmpdir/package/binary.js" <<'NODE'
-const fs = require("fs");
-const path = process.argv[2];
-let source = fs.readFileSync(path, "utf8");
+              const fs = require("fs");
+              const path = process.argv[2];
+              let source = fs.readFileSync(path, "utf8");
 
-if (!source.includes("rawNodePlatform = process.platform")) {
-  source = source.replace(
-    "const rawOsType = os.type();\n  const rawArchitecture = os.arch();",
-    "const rawOsType = os.type();\n  const rawNodePlatform = process.platform;\n  const rawArchitecture = os.arch();",
-  );
-  source = source.replace(
-    "  let osType = \"\";",
-    "  let osType = \"\";\n  if (rawNodePlatform === \"android\") {\n    osType = \"linux-android\";\n  }",
-  );
-  source = source.replace(
-    "  if (rawOsType === \"Linux\") {",
-    "  if (rawOsType === \"Linux\" && rawNodePlatform !== \"android\") {",
-  );
-  fs.writeFileSync(path, source, "utf8");
-}
-NODE
+              if (!source.includes("rawNodePlatform = process.platform")) {
+                source = source.replace(
+                  "const rawOsType = os.type();\n  const rawArchitecture = os.arch();",
+                  "const rawOsType = os.type();\n  const rawNodePlatform = process.platform;\n  const rawArchitecture = os.arch();",
+                );
+                source = source.replace(
+                  "  let osType = \"\";",
+                  "  let osType = \"\";\n  if (rawNodePlatform === \"android\") {\n    osType = \"linux-android\";\n  }",
+                );
+                source = source.replace(
+                  "  if (rawOsType === \"Linux\") {",
+                  "  if (rawOsType === \"Linux\" && rawNodePlatform !== \"android\") {",
+                );
+                fs.writeFileSync(path, source, "utf8");
+              }
+              NODE
             tar -czf "./npm/${pkg}" -C "$tmpdir" package
             rm -rf "$tmpdir"
             npm publish --provenance --access public "./npm/${pkg}"
