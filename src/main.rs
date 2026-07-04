@@ -52,8 +52,8 @@ async fn share(port: u16) -> Result<()> {
     let addr = endpoint.addr();
     let ticket = EndpointTicket::from(addr).to_string();
 
-    println!("🚀 Sharing localhost:{}", port);
-    println!("📋 Give this command to your friend:\n");
+    println!("Sharing localhost:{}", port);
+    println!("Give this command to your friend:\n");
     println!("    npx p2p-tunnel connect {}\n", ticket);
     println!("Waiting for connections...");
 
@@ -99,7 +99,7 @@ async fn connect(ticket: String) -> Result<()> {
 
     // 3. Start a local TCP listener to act as the proxy
     let local_listener = TcpListener::bind("127.0.0.1:8080").await?;
-    println!("🌍 Connected! Service available at: http://localhost:8080");
+    println!("Connected! Service available at: http://localhost:8080");
 
     loop {
         // 4. Wait for the user's browser to hit localhost:8080
