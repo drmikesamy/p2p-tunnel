@@ -2,9 +2,8 @@
 
 use anyhow::Result;
 use clap::{Parser, Subcommand};
-use iroh::net::{Endpoint, NodeAddr};
-use iroh::net::key::SecretKey;
-use iroh::net::ticket::NodeTicket;
+use iroh::{Endpoint, EndpointAddr, SecretKey, endpoint::presets};
+use iroh_tickets::endpoint::EndpointTicket;
 use tokio::io::copy;
 use tokio::net::{TcpListener, TcpStream};
 
@@ -40,15 +39,18 @@ async fn main() -> Result<()> {
 async fn share(port: u16) -> Result<()> {
     // 1. Initialize an Iroh Endpoint
     let secret_key = SecretKey::generate();
-    let endpoint = Endpoint::builder()
+    let endpoint = Endpoint::builder(presets::N0)
         .secret_key(secret_key)
         .alpns(vec![ALPN.to_vec()])
         .bind()
         .await?;
 
+    // Wait until we've discovered connectivity info before creating the ticket.
+    endpoint.online().await;
+
     // 2. Generate a connection ticket
-    let addr = endpoint.node_addr().await?;
-    let ticket = NodeTicket::from(addr).to_string();
+    let addr = endpoint.addr();
+    let ticket = EndpointTicket::from(addr).to_string();
 
     println!("🚀 Sharing localhost:{}", port);
     println!("📋 Give this command to your friend:\n");
@@ -88,12 +90,12 @@ async fn share(port: u16) -> Result<()> {
 }
 
 async fn connect(ticket: String) -> Result<()> {
-    // 1. Parse the ticket back into a NodeAddr
-    let ticket: NodeTicket = ticket.parse()?;
-    let host_addr: NodeAddr = ticket.into();
+    // 1. Parse the ticket back into an EndpointAddr
+    let ticket: EndpointTicket = ticket.parse()?;
+    let host_addr: EndpointAddr = ticket.into();
 
     // 2. Initialize a local Iroh Endpoint
-    let endpoint = Endpoint::builder().bind().await?;
+    let endpoint = Endpoint::bind(presets::N0).await?;
 
     // 3. Start a local TCP listener to act as the proxy
     let local_listener = TcpListener::bind("127.0.0.1:8080").await?;

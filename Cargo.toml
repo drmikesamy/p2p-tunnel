@@ -1,6 +1,6 @@
 [package]
 name = "p2p-tunnel"
-version = "0.1.11"
+version = "0.1.12"
 edition = "2024"
 description = "Instantly share a localhost port over P2P using Iroh"
 repository = "https://github.com/drmikesamy/p2p-tunnel"
@@ -8,7 +8,8 @@ license = "MIT"
 readme = "README.md"
 
 [dependencies]
-iroh = "0.28"
+iroh = "1"
+iroh-tickets = "1"
 tokio = { version = "1", features = ["full"] }
 clap = { version = "4", features = ["derive"] }
 anyhow = "1.0"
