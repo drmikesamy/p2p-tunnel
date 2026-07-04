@@ -161,11 +161,17 @@ jobs:
             echo "CC_x86_64_linux_android=${NDK_BIN}/x86_64-linux-android24-clang" >> "$GITHUB_ENV"
           fi
       - name: Install cargo-zigbuild
+        if: ${{ contains(matrix.dist_args, 'linux-android') }}
         shell: bash
         run: |
           if ! command -v cargo-zigbuild >/dev/null 2>&1; then
             cargo install cargo-zigbuild --locked
           fi
+      - name: Install Zig
+        if: ${{ contains(matrix.dist_args, 'linux-android') }}
+        uses: mlugg/setup-zig@v2
+        with:
+          version: 0.13.0
       - name: Build artifacts
         run: |
           # Actually do builds and make zips and whatnot
