@@ -339,16 +339,32 @@ jobs:
           const path = process.argv[2];
           let source = fs.readFileSync(path, "utf8");
 
-          if (!source.includes("rawNodePlatform = process.platform")) {
-            source = source.replace(
+          // Fail the release instead of silently publishing an unpatched installer
+          // if a dist template change moves one of these anchors.
+          const patch = (from, to) => {
+            if (!source.includes(from)) {
+              console.error(`patch-binary: anchor not found in ${path}:\n${from}`);
+              process.exit(1);
+            }
+            source = source.replace(from, to);
+          };
+
+          if (source.includes("rawNodePlatform = process.platform")) {
+            console.log("patch-binary: already patched, skipping");
+          } else {
+            patch(
               "const rawOsType = os.type();\n  const rawArchitecture = os.arch();",
               "const rawOsType = os.type();\n  const rawNodePlatform = process.platform;\n  const rawArchitecture = os.arch();",
             );
-            source = source.replace(
-              "  let osType = \"\";",
-              "  let osType = \"\";\n  if (rawNodePlatform === \"android\") {\n    osType = \"linux-android\";\n  }",
+            // Must come AFTER `switch (rawOsType)`: Node on Android (Termux) reports
+            // os.type() === "Linux", so the switch would overwrite an earlier android
+            // check with "unknown-linux-gnu" and install the glibc build, which Bionic
+            // rejects ("TLS segment is underaligned").
+            patch(
+              "  let arch = \"\";",
+              "  if (rawNodePlatform === \"android\") {\n    osType = \"linux-android\";\n  }\n\n  let arch = \"\";",
             );
-            source = source.replace(
+            patch(
               "  if (rawOsType === \"Linux\") {",
               "  if (rawOsType === \"Linux\" && rawNodePlatform !== \"android\") {",
             );
